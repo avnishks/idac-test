@@ -45,8 +45,6 @@ def define_model(input_shape, num_classes, NN_name):
 
     Args:
     input_shape = (image_width, image_height, #channels) = shape of the images being fed to the input layer.
-    num_classes = number of classes in the training dataset
-    NN_name = cifar or mnist
     """
     img_input = Input(shape=input_shape, name='{}_img_input'.format(NN_name))
     x = Conv2D(32, (3, 3), activation='relu', name='{}_conv1'.format(NN_name))(img_input)
@@ -61,12 +59,6 @@ def define_model(input_shape, num_classes, NN_name):
     return model
 
 def data_generators(train_data_dir, test_data_dir):
-    """ Define the data generators using flow_from_directory
-
-    Args:
-    train_data_dir = path to the training dataset
-    test_data_dir = path to the testing dataset
-    """
     datagen = ImageDataGenerator(
         rescale=1. / 255,
         width_shift_range=0.2,
@@ -150,35 +142,59 @@ def train():
         num_classes=cifar_num_classes)
 
     # compile
-    model_mnist = define_model(
-        (IMG_WIDTH, IMG_HEIGHT, num_channels),
-        mnist_num_classes,
-        "mnist")
-    print("[DEBUG] model_mnist.img_input: ", model_mnist(img_input))
-    model_cifar = define_model(
-        (IMG_WIDTH, IMG_HEIGHT, num_channels),
-        cifar_num_classes,
-        "cifar")
+    input_shape = (IMG_WIDTH, IMG_HEIGHT, num_channels)
+    shared = Conv2D(32, (3, 3), activation='relu', name='shared_conv')
+
+    img_input_mnist = Input(shape=input_shape, name='mnist_img_input')
+    x_mnist = shared(img_input_mnist)
+    x_mnist = MaxPooling2D((2, 2), name='mnist_pool1')(x_mnist)
+    x_mnist = Conv2D(64, (3, 3), activation='relu', name='mnist_conv2')(x_mnist)
+    x_mnist = MaxPooling2D((2, 2), name='mnist_pool2')(x_mnist)
+    x_mnist = Conv2D(32, (3, 3), activation='relu', name='mnist_conv3')(x_mnist)
+    x_mnist = Flatten(name='mnist_flatten')(x_mnist)
+    x_mnist = Dense(64, activation='relu', name='mnist_fc1')(x_mnist)
+    out_mnist = Dense(mnist_num_classes, activation='softmax', name='mnist_prediction')(x_mnist)
+    model_mnist = Model(inputs=img_input_mnist, outputs=out_mnist, name="model_mnist")
+    
+    img_input_cifar = Input(shape=input_shape, name='cifar_img_input')
+    x_cifar = shared(img_input_cifar)
+    x_cifar = MaxPooling2D((2, 2), name='cifar_pool1')(x_cifar)
+    x_cifar = Conv2D(64, (3, 3), activation='relu', name='cifar_conv2')(x_cifar)
+    x_cifar = MaxPooling2D((2, 2), name='cifar_pool2')(x_cifar)
+    x_cifar = Conv2D(32, (3, 3), activation='relu', name='cifar_conv3')(x_cifar)
+    x_cifar = Flatten(name='cifar_flatten')(x_cifar)
+    x_cifar = Dense(64, activation='relu', name='cifar_fc1')(x_cifar)
+    out_cifar = Dense(cifar_num_classes, activation='softmax', name='cifar_prediction')(x_cifar)
+    model_cifar = Model(inputs=img_input_cifar, outputs=out_cifar, name="model_cifar")
+    
+    # model_mnist = define_model(
+    #     (IMG_WIDTH, IMG_HEIGHT, num_channels),
+    #     mnist_num_classes,
+    #     "mnist")
+    # print("[DEBUG] model_mnist.img_input: ", model_mnist(img_input))
+    # model_cifar = define_model(
+    #     (IMG_WIDTH, IMG_HEIGHT, num_channels),
+    #     cifar_num_classes,
+    #     "cifar")
     
     merged = Model(inputs=[img_input_mnist, img_input_cifar], outputs=[out_mnist, out_cifar])
+    # plot_model(merged, to_file='demo.png', show_shape=True)
     merged.compile(
         optimizer='rmsprop',
         # loss=['categorical_crossentropy', 'categorical_crossentropy'],
-        # loss_weights=[1., ALPHA]
+        # loss_weights=[1., ALPHA],
         loss={'mnist_prediction': 'categorical_crossentropy', 'cifar_prediction': 'categorical_crossentropy'},
         loss_weights={'mnist_prediction': 1., 'cifar_prediction': ALPHA},
         metrics=['accuracy'])
     history = merged.fit_generator(
-    	[mnist_train_generator, cifar_train_generator],
-    	steps_per_epoch= mnist_num_train_samples/TRAIN_BATCH_SIZE,
-    	epochs=EPOCHS,
-    	validation_data=[mnist_test_generator, cifar_test_generator],
+        [mnist_train_generator, cifar_train_generator],
+        steps_per_epoch= mnist_num_train_samples/TRAIN_BATCH_SIZE,
+        epochs=EPOCHS,
+        validation_data=[mnist_test_generator, cifar_test_generator],
         validation_steps=mnist_num_test_samples/TEST_BATCH_SIZE)
 
-    # model.save('problem_2A.h5')
 
     if plot_switch:
-        plot_model(merged, to_file='model_architecture_2A.png', show_shape=True)
         plot_training(history)
 
 
