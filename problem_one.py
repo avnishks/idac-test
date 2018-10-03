@@ -26,12 +26,12 @@ else:
 
 
 # define hyperparameters and data paths
-EPOCHS = 200
+EPOCHS = 15
 TRAIN_BATCH_SIZE = 16
 TEST_BATCH_SIZE = 16
 IMG_WIDTH, IMG_HEIGHT, num_channels = 28, 28, 3
 plot_switch = True
-
+ 
 train_data_dir = os.path.join(base_dir, 'Images/Cells/Train')
 test_data_dir = os.path.join(base_dir, 'Images/Cells/Test')
 
@@ -83,14 +83,14 @@ def plot_training(history_name):
 
 def train():
     """ Define data streams and train the Neural Net.
-    
+
     """
     datagen = ImageDataGenerator(
     	rescale=1. / 255,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
-        shear_range=0.2,
-        zoom_range=0.25,
+        # width_shift_range=0.2,
+        # height_shift_range=0.2,
+        # shear_range=0.2,
+        # zoom_range=0.25,
         fill_mode='nearest')
 
     train_generator = datagen.flow_from_directory(
